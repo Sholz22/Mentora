@@ -41,9 +41,9 @@ def run_async_in_thread(coro):
         return future.result()
 
 # Streamlit configuration
-st.set_page_config(page_title="Vocatio", layout="centered")
+st.set_page_config(page_title="Mentora", layout="centered")
 
-st.title("👔 Vocatio – AI Career Advisor")
+st.title("👔 Mentora – AI Career Advisor")
 st.markdown("Ask me about career advice, job opportunities, skill development, or industry trends.")
 
 # Chat history
@@ -66,7 +66,7 @@ if st.button("Ask") or user_input:
                     handle_user_input_async(st.session_state.user_id, user_input)
                 )
                 st.session_state.chat_history.append(("👩🏽‍🌾 You", user_input))
-                st.session_state.chat_history.append(("🤖 Vocatio", response))
+                st.session_state.chat_history.append(("🤖 Mentora", response))
 
             except Exception as e:
                 st.error(f"Error: {e}")
