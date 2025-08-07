@@ -1,0 +1,17 @@
+langchain>=0.1.14
+langchain-google-genai>=0.0.9
+pydantic>=1.10
+python-dotenv>=1.0
+requests>=2.31.0
+pymongo
+tqdm
+beautifulsoup4>=4.12.3
+pydantic-settings
+dotenv
+faiss-cpu>=1.7.4
+httpx
+langchain_community
+pymupdf
+uvicorn
+fastapi
+streamlit
