@@ -22,8 +22,8 @@ async def handle_user_input_async(user_id: str, user_input: str) -> str:
     try:
         logger.info(f"Processing async request from user {user_id}: {user_input[:100]}...")
         
-        # Use ainvoke if your agent supports it
-        response_data = await agent.ainvoke({"input": user_input})
+ 
+        response_data = agent.invoke({"input": user_input})
         
         if isinstance(response_data, dict):
             response = (
@@ -38,7 +38,7 @@ async def handle_user_input_async(user_id: str, user_input: str) -> str:
         if not response or not response.strip():
             response = "I apologize, but I couldn't generate a proper response. Please try rephrasing your question."
         
-        # Log successful interaction (you might want to make this async too)
+        # Log successful interaction
         log_chat(user_id, user_input, response)
         logger.info(f"Successfully processed async request for user {user_id}")
         
@@ -97,8 +97,8 @@ def run_chat():
             continue
 
         try:
-            Response = agent.invoke(user_input)
-            response = Response["result"]
+            response_data = agent.invoke({"input": user_input})
+            response = response_data.get("output", str(response_data))
             print("🤖:", response)
 
             # Log response to MongoDB

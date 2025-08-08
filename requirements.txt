@@ -15,3 +15,6 @@ pymupdf
 uvicorn
 fastapi
 streamlit
+asyncio
+concurrent.futures
+uuid

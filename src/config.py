@@ -14,9 +14,6 @@ class Settings(BaseSettings):
     mongo_db: str = Field(default="agentic_bot")
     mongo_collection: str = Field(default="chat_logs")
 
-    # Weather API settings
-    weather_api_key: str = Field(..., env="weather_api_key")
-
     class Config:
         env_file = ".env"  
 

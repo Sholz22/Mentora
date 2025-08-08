@@ -10,7 +10,8 @@ def build_career_agent():
     llm = ChatGoogleGenerativeAI(
         temperature=settings.temperature,
         model=settings.model_name,
-        google_api_key=settings.google_api_key
+        google_api_key=settings.google_api_key,
+        convert_system_message_to_human=True 
     )
 
     memory = get_summary_memory()
@@ -35,5 +36,10 @@ def build_career_agent():
         agent=AgentType.CHAT_ZERO_SHOT_REACT_DESCRIPTION,
         memory=memory,
         verbose=True,
-        agent_kwargs={"system_message": system_prompt()},
+        agent_kwargs={
+            "system_message": system_prompt(),
+            "handle_parsing_errors": True 
+        },
+        max_iterations=5,  
+        early_stopping_method="generate"  
     )
