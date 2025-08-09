@@ -1,15 +1,19 @@
 from agent.build_agent import build_career_agent
 import logging
-from database.logger import log_chat, get_chat_history, is_first_time_user, clear_chat_history
+from database.logger import (
+    log_chat, get_chat_history, is_first_time_user, clear_chat_history,
+    update_user_last_activity
+)
 
 logger = logging.getLogger(__name__)
 
 # Create agent only once to avoid reinitializing
 agent = build_career_agent()
 
-async def handle_user_input_async(user_id: str, user_input: str) -> str:
+async def handle_user_input_async(user_id: str, user_input: str, username: str = None) -> str:
     """
     Async version of handle_user_input for better performance with concurrent requests.
+    Added username parameter for user activity tracking.
     """
     if not user_id or not user_id.strip():
         return "⚠️ Error: User ID is required"
@@ -22,7 +26,10 @@ async def handle_user_input_async(user_id: str, user_input: str) -> str:
     try:
         logger.info(f"Processing async request from user {user_id}: {user_input[:100]}...")
         
- 
+        # Update user activity if username provided
+        if username:
+            update_user_last_activity(username)
+        
         response_data = agent.invoke({"input": user_input})
         
         if isinstance(response_data, dict):
@@ -56,6 +63,7 @@ async def handle_user_input_async(user_id: str, user_input: str) -> str:
         return error_msg
 
 def show_history(user_id: str):
+    """Show chat history for CLI interface"""
     print(f"\n📜 Chat history for user: {user_id}")
     history = get_chat_history(user_id)
 
@@ -69,6 +77,7 @@ def show_history(user_id: str):
         print(f"🤖: {entry['answer']}")
 
 def run_chat():
+    """CLI chat interface"""
     agent = build_career_agent()
 
     print("🤖 Agentic chatbot is ready!")

@@ -13,6 +13,10 @@ class Settings(BaseSettings):
     mongo_uri: str = Field(..., env="MONGO_URI")
     mongo_db: str = Field(default="agentic_bot")
     mongo_collection: str = Field(default="chat_logs")
+    
+    # User authentication collections
+    users_collection: str = Field(default="users")
+    chat_history_collection: str = Field(default="chat_history")
 
     class Config:
         env_file = ".env"  
