@@ -2,6 +2,13 @@ import streamlit as st
 import asyncio
 import concurrent.futures
 import os
+import base64
+import time
+from io import StringIO
+import PyPDF2
+import docx
+from pathlib import Path
+from styles import StreamlitChatTheme, ThemePresets
 
 # Set up event loop for the main thread before importing other modules
 def setup_event_loop():
@@ -25,9 +32,15 @@ from database.logger import (
     save_streamlit_chat_history, load_streamlit_chat_history
 )
 
+def get_base64_of_bin_file(bin_file):
+    """Get base64 encoding of binary file."""
+    with open(bin_file, 'rb') as f:
+        data = f.read()
+    return base64.b64encode(data).decode()
+
 def load_css():
     """Load CSS from external file"""
-    css_file = "styles.css"
+    css_file = "style.css"
     if os.path.exists(css_file):
         with open(css_file, "r") as f:
             css = f.read()
@@ -48,6 +61,30 @@ def run_async_in_thread(coro):
     with concurrent.futures.ThreadPoolExecutor() as executor:
         future = executor.submit(run_in_thread)
         return future.result()
+
+def extract_text_from_pdf(file_bytes):
+    """Extract text from PDF file."""
+    try:
+        from io import BytesIO
+        pdf_reader = PyPDF2.PdfReader(BytesIO(file_bytes))
+        text = ""
+        for page in pdf_reader.pages:
+            text += page.extract_text()
+        return text
+    except Exception as e:
+        return f"Error reading PDF: {str(e)}"
+
+def extract_text_from_docx(file_bytes):
+    """Extract text from DOCX file."""
+    try:
+        from io import BytesIO
+        doc = docx.Document(BytesIO(file_bytes))
+        text = ""
+        for paragraph in doc.paragraphs:
+            text += paragraph.text + "\n"
+        return text
+    except Exception as e:
+        return f"Error reading DOCX: {str(e)}"
 
 def render_message(speaker, message, is_user=False):
     """Render a single chat message"""
@@ -89,22 +126,38 @@ def render_welcome_message():
 
 def render_auth_form():
     """Render login/signup form"""
+    # Background with overlay
     st.markdown("""
-    <div class="auth-container">
-        <div class="auth-header">
-            <div class="app-title">👔 Mentora – AI Career Advisor</div>
-            <div class="app-subtitle">Your personalized AI assistant for career guidance</div>
-        </div>
-    </div>
+    <div class="auth-page-background">
+        <div class="auth-overlay">
+            <div class="auth-title-section">
+                <div class="app-title">👔 Mentora – AI Career Advisor</div>
+                <div class="app-subtitle">Your personalized AI assistant for career guidance</div>
+            </div>
     """, unsafe_allow_html=True)
     
     tab1, tab2 = st.tabs(["Login", "Sign Up"])
     
     with tab1:
         st.markdown("### Login to Your Account")
+        st.markdown('<div class="auth-help-text">Welcome back! Please enter your credentials to continue.</div>', unsafe_allow_html=True)
+        
         with st.form("login_form"):
-            username = st.text_input("Username", key="login_username")
-            password = st.text_input("Password", type="password", key="login_password")
+            username = st.text_input(
+                "Username", 
+                key="login_username",
+                placeholder="Enter your username",
+                help="Your unique username"
+            )
+            
+            password = st.text_input(
+                "Password", 
+                type="password", 
+                key="login_password",
+                placeholder="Enter your password",
+                help="Your account password"
+            )
+            
             login_button = st.form_submit_button("Login", use_container_width=True)
             
             if login_button:
@@ -124,11 +177,38 @@ def render_auth_form():
     
     with tab2:
         st.markdown("### Create New Account")
+        st.markdown('<div class="auth-help-text">Join Mentora today! Fill in the details below to get started with your AI career advisor.</div>', unsafe_allow_html=True)
+        
         with st.form("signup_form"):
-            new_username = st.text_input("Username", key="signup_username")
-            new_email = st.text_input("Email", key="signup_email")
-            new_password = st.text_input("Password", type="password", key="signup_password")
-            confirm_password = st.text_input("Confirm Password", type="password", key="confirm_password")
+            new_username = st.text_input(
+                "Username", 
+                key="signup_username",
+                placeholder="Choose a unique username",
+                help="This will be your unique identifier"
+            )
+            new_email = st.text_input(
+                "Email", 
+                key="signup_email",
+                placeholder="your.email@example.com",
+                help="We'll use this for account recovery"
+            )
+            
+            new_password = st.text_input(
+                "Password", 
+                type="password", 
+                key="signup_password",
+                placeholder="Create a strong password (min. 6 characters)",
+                help="Use a mix of letters, numbers, and symbols"
+            )
+            
+            confirm_password = st.text_input(
+                "Confirm Password", 
+                type="password", 
+                key="confirm_password",
+                placeholder="Re-enter your password",
+                help="Must match the password above"
+            )
+            
             signup_button = st.form_submit_button("Sign Up", use_container_width=True)
             
             if signup_button:
@@ -147,6 +227,11 @@ def render_auth_form():
                         st.error("Passwords do not match!")
                 else:
                     st.error("Please fill in all fields!")
+    
+    st.markdown("""
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
 def render_sidebar():
     """Render collapsible sidebar with chat controls"""
@@ -156,6 +241,36 @@ def render_sidebar():
             <h3>💬 Chat Controls</h3>
         </div>
         """, unsafe_allow_html=True)
+        
+        # File upload section
+        st.markdown("### 📎 Upload Documents")
+        uploaded_file = st.file_uploader(
+            "Upload PDF or Word document",
+            type=['pdf', 'docx', 'doc'],
+            help="Upload your resume, cover letter, or any career-related document"
+        )
+        
+        if uploaded_file is not None:
+            if st.button("📄 Analyze Document", use_container_width=True):
+                with st.spinner("Processing document..."):
+                    file_bytes = uploaded_file.read()
+                    
+                    if uploaded_file.type == "application/pdf":
+                        extracted_text = extract_text_from_pdf(file_bytes)
+                    elif uploaded_file.type in ["application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/msword"]:
+                        extracted_text = extract_text_from_docx(file_bytes)
+                    else:
+                        extracted_text = "Unsupported file type"
+                    
+                    # Add document analysis to chat
+                    if not extracted_text.startswith("Error"):
+                        analysis_prompt = f"Please analyze this document and provide career advice:\n\n{extracted_text[:2000]}..."
+                        st.session_state.pending_analysis = analysis_prompt
+                        st.success(f"Document '{uploaded_file.name}' processed successfully!")
+                    else:
+                        st.error(extracted_text)
+        
+        st.markdown("---")
         
         # New Chat button
         if st.button("🆕 New Chat", use_container_width=True, key="new_chat_btn"):
@@ -212,11 +327,12 @@ def render_main_interface():
             </div>
             <div class="title-subtitle">Career Guidance & Professional Growth</div>
         </div>
+        <button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
     </div>
     """, unsafe_allow_html=True)
     
     # Chat messages container
-    st.markdown('<div class="chat-container">', unsafe_allow_html=True)
+    st.markdown('<div class="chat-container" id="chat-container">', unsafe_allow_html=True)
     
     if st.session_state.chat_history:
         for speaker, message in st.session_state.chat_history:
@@ -238,6 +354,16 @@ def render_main_interface():
     
     # Fixed bottom input area - expanded width
     st.markdown('<div class="input-container-fixed">', unsafe_allow_html=True)
+    
+    # Voice input section
+    st.markdown("""
+    <div class="voice-section">
+        <button class="voice-button" id="voice-btn" onclick="toggleVoiceRecording()">
+            🎤 Voice Input
+        </button>
+        <span id="voice-status" class="voice-status"></span>
+    </div>
+    """, unsafe_allow_html=True)
     
     # Create the input form
     with st.form(key="chat_form", clear_on_submit=True):
@@ -309,6 +435,8 @@ def initialize_session_state():
         st.session_state.username = None
     if "is_processing" not in st.session_state:
         st.session_state.is_processing = False
+    if "pending_analysis" not in st.session_state:
+        st.session_state.pending_analysis = None
 
 def main():
     """Main application function"""
@@ -319,12 +447,21 @@ def main():
         layout="wide",
         initial_sidebar_state="expanded"
     )
-    
+
+    # theme = StreamlitChatTheme(ThemePresets.green_farm_theme())
+    # theme.apply_theme()
+
     # Load external CSS
     load_css()
     
     # Initialize session state
     initialize_session_state()
+    
+    # Handle pending document analysis
+    if st.session_state.pending_analysis and st.session_state.authenticated:
+        handle_chat_submission(st.session_state.pending_analysis)
+        st.session_state.pending_analysis = None
+        st.rerun()
     
     # Route to appropriate interface
     if not st.session_state.authenticated:
@@ -356,6 +493,97 @@ def main():
         if (chatContainer) {
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
+    }
+
+    // Sidebar toggle functionality
+    function toggleSidebar() {
+        const sidebar = document.querySelector('.stSidebar');
+        if (sidebar) {
+            sidebar.classList.toggle('collapsed');
+        }
+    }
+
+    // Voice recording functionality
+    let isRecording = false;
+    let recognition = null;
+    
+    function toggleVoiceRecording() {
+        const voiceBtn = document.getElementById('voice-btn');
+        const voiceStatus = document.getElementById('voice-status');
+        
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+            voiceStatus.textContent = 'Voice recognition not supported';
+            voiceStatus.style.color = '#ef4444';
+            return;
+        }
+        
+        if (!isRecording) {
+            startRecording();
+        } else {
+            stopRecording();
+        }
+    }
+    
+    function startRecording() {
+        const voiceBtn = document.getElementById('voice-btn');
+        const voiceStatus = document.getElementById('voice-status');
+        
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognition = new SpeechRecognition();
+        
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'en-US';
+        
+        recognition.onstart = function() {
+            isRecording = true;
+            voiceBtn.textContent = '🔴 Stop Recording';
+            voiceBtn.style.background = '#ef4444';
+            voiceStatus.textContent = 'Listening...';
+            voiceStatus.style.color = '#10b981';
+        };
+        
+        recognition.onresult = function(event) {
+            let finalTranscript = '';
+            
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                const transcript = event.results[i][0].transcript;
+                if (event.results[i].isFinal) {
+                    finalTranscript += transcript;
+                }
+            }
+            
+            if (finalTranscript) {
+                const inputField = document.querySelector('input[data-testid="stTextInput"]');
+                if (inputField) {
+                    inputField.value = finalTranscript;
+                    inputField.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+                stopRecording();
+            }
+        };
+        
+        recognition.onerror = function(event) {
+            voiceStatus.textContent = 'Error: ' + event.error;
+            voiceStatus.style.color = '#ef4444';
+            stopRecording();
+        };
+        
+        recognition.start();
+    }
+    
+    function stopRecording() {
+        const voiceBtn = document.getElementById('voice-btn');
+        const voiceStatus = document.getElementById('voice-status');
+        
+        if (recognition) {
+            recognition.stop();
+        }
+        
+        isRecording = false;
+        voiceBtn.textContent = '🎤 Voice Input';
+        voiceBtn.style.background = '';
+        voiceStatus.textContent = '';
     }
 
     // Auto-scroll and enhanced UX
@@ -406,6 +634,21 @@ def main():
     if (targetNode) {
         observer.observe(targetNode, { childList: true, subtree: true });
     }
+    
+    // Enhanced cursor visibility for input fields
+    document.addEventListener('DOMContentLoaded', function() {
+        const style = document.createElement('style');
+        style.textContent = `
+            input[type="text"], input[type="password"], input[type="email"] {
+                caret-color: #3b82f6 !important;
+                caret-width: 2px !important;
+            }
+            input:focus {
+                caret-color: #1d4ed8 !important;
+            }
+        `;
+        document.head.appendChild(style);
+    });
     </script>
     """, unsafe_allow_html=True)
 

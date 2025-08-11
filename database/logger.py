@@ -89,7 +89,7 @@ def create_user(username: str, email: str, password: str) -> tuple[bool, str]:
             "username": username,
             "email": email,
             "password_hash": password_hash,
-            "created_at": datetime.utcnow(),
+            "created_at": datetime.now(),
             "last_login": None
         }
         
@@ -122,7 +122,7 @@ def authenticate_user(username: str, password: str) -> bool:
             # Update last login
             users_collection.update_one(
                 {"username": username},
-                {"$set": {"last_login": datetime.utcnow()}}
+                {"$set": {"last_login": datetime.now()}}
             )
             return True
         else:
@@ -149,7 +149,7 @@ def save_streamlit_chat_history(username: str, chat_history: list) -> bool:
                     "username": username,
                     "speaker": speaker,
                     "message": message,
-                    "timestamp": datetime.utcnow()
+                    "timestamp": datetime.now()
                 })
             
             chat_history_collection.insert_many(chat_docs)
@@ -201,7 +201,7 @@ def update_user_last_activity(username: str):
     try:
         users_collection.update_one(
             {"username": username},
-            {"$set": {"last_activity": datetime.utcnow()}}
+            {"$set": {"last_activity": datetime.now()}}
         )
     except Exception as e:
         pass  # Silent fail for this non-critical operation

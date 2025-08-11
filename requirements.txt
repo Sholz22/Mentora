@@ -18,3 +18,5 @@ streamlit
 asyncio
 concurrent.futures
 uuid
+PyPDF2
+python-docx
