@@ -3,7 +3,8 @@ from src.config import settings
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.agents import initialize_agent, AgentType
 from src.prompts import system_prompt
-from tools.tools import rag_tool, personality_tool, skills_tool, job_market_tool, education_path_tool, switch_tool, roadmap_tool, mentor_tool, salary_tool, resume_tool, job_explainer_tool
+from tools.career_tools import rag_tool, salary_tool, resume_tool, job_explainer_tool
+from tools.profile_tools import update_user_profile_tool, get_user_profile_tool
 
 
 def build_career_agent():
@@ -17,17 +18,12 @@ def build_career_agent():
     memory = get_summary_memory()
 
     tools = [
-        personality_tool,
-        skills_tool,
-        job_market_tool,
-        education_path_tool,
-        switch_tool,
-        roadmap_tool,
-        mentor_tool,
+        get_user_profile_tool,
         rag_tool,
         salary_tool,
         resume_tool,
-        job_explainer_tool
+        job_explainer_tool,
+        update_user_profile_tool
     ]
 
     return initialize_agent(

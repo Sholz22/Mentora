@@ -205,3 +205,28 @@ def update_user_last_activity(username: str):
         )
     except Exception as e:
         pass  # Silent fail for this non-critical operation
+
+    # Profiles collection
+profiles_collection = db["user_profiles_collection"]
+profiles_collection.create_index("username", unique=True)
+
+def get_user_profile(username: str) -> dict:
+    """Return current user profile dictionary."""
+    profile_doc = profiles_collection.find_one({"username": username}, {"_id": 0, "username": 0})
+    return profile_doc or {}
+
+def update_user_profile(username: str, key: str, value: str) -> bool:
+    """Update or add a field in the user profile."""
+    result = profiles_collection.update_one(
+        {"username": username},
+        {"$set": {key: value}},
+        upsert=True
+    )
+    return result.acknowledged
+
+def profile_to_text(username: str) -> str:
+    """Convert the profile dict to a text block for prompts."""
+    profile = get_user_profile(username)
+    if not profile:
+        return "No profile information collected yet."
+    return "\n".join([f"{k.capitalize()}: {v}" for k, v in profile.items()])

@@ -316,9 +316,10 @@ def render_main_interface():
     # Render sidebar
     render_sidebar()
     
-    # Main header - redesigned and compact
+    # Main header - redesigned and compact with FIXED LAYOUT
     st.markdown("""
     <div class="app-header-compact">
+        <button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
         <div class="title-container">
             <div class="mentora-title">
                 <span class="title-icon">👔</span>
@@ -327,7 +328,6 @@ def render_main_interface():
             </div>
             <div class="title-subtitle">Career Guidance & Professional Growth</div>
         </div>
-        <button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
     </div>
     """, unsafe_allow_html=True)
     
@@ -351,10 +351,10 @@ def render_main_interface():
             <span>Just a second...</span>
         </div>
         """, unsafe_allow_html=True)
-    
-    # Fixed bottom input area - expanded width
-    st.markdown('<div class="input-container-fixed">', unsafe_allow_html=True)
-    
+
+    # Fixed bottom input area - USING NEW CLASS NAME
+    # st.markdown('<div class="chat-input-fixed">', unsafe_allow_html=True)
+
     # Voice input section
     st.markdown("""
     <div class="voice-section">
@@ -364,7 +364,7 @@ def render_main_interface():
         <span id="voice-status" class="voice-status"></span>
     </div>
     """, unsafe_allow_html=True)
-    
+
     # Create the input form
     with st.form(key="chat_form", clear_on_submit=True):
         input_col, button_col = st.columns([6, 1])
@@ -385,9 +385,11 @@ def render_main_interface():
                 use_container_width=True,
                 help="Send message"
             )
-    
+
+    # Close fixed bottom div
     st.markdown('</div>', unsafe_allow_html=True)
-    
+
+
     return submit_button, user_input
 
 def handle_chat_submission(user_input):
@@ -437,6 +439,8 @@ def initialize_session_state():
         st.session_state.is_processing = False
     if "pending_analysis" not in st.session_state:
         st.session_state.pending_analysis = None
+    if "sidebar_collapsed" not in st.session_state:
+        st.session_state.sidebar_collapsed = False
 
 def main():
     """Main application function"""
@@ -474,7 +478,7 @@ def main():
             handle_chat_submission(user_input)
             st.rerun()
 
-    # JavaScript for enhanced UX
+    # JavaScript for enhanced UX - COMPLETE AND ENHANCED
     st.markdown("""
     <script>
     // Function to set input field value
@@ -495,11 +499,24 @@ def main():
         }
     }
 
-    // Sidebar toggle functionality
+    // ENHANCED SIDEBAR TOGGLE FUNCTIONALITY
     function toggleSidebar() {
-        const sidebar = document.querySelector('.stSidebar');
-        if (sidebar) {
-            sidebar.classList.toggle('collapsed');
+        const sidebar = document.querySelector('[data-testid="stSidebar"]');
+        const sidebarContent = document.querySelector('.stSidebar');
+        
+        if (sidebar || sidebarContent) {
+            const element = sidebar || sidebarContent;
+            
+            // Toggle collapsed class
+            if (element.classList.contains('collapsed')) {
+                element.classList.remove('collapsed');
+                element.style.transform = 'translateX(0)';
+                element.style.transition = 'transform 0.3s ease';
+            } else {
+                element.classList.add('collapsed');
+                element.style.transform = 'translateX(-100%)';
+                element.style.transition = 'transform 0.3s ease';
+            }
         }
     }
 
@@ -600,6 +617,21 @@ def main():
             });
         });
         
+        // Initialize sidebar state
+        const sidebar = document.querySelector('[data-testid="stSidebar"]') || 
+                      document.querySelector('.stSidebar');
+        if (sidebar) {
+            // Ensure sidebar starts expanded on desktop
+            if (window.innerWidth > 768) {
+                sidebar.classList.remove('collapsed');
+                sidebar.style.transform = 'translateX(0)';
+            } else {
+                // On mobile, start collapsed
+                sidebar.classList.add('collapsed');
+                sidebar.style.transform = 'translateX(-100%)';
+            }
+        }
+        
         // Scroll to bottom on page load
         setTimeout(scrollToBottom, 100);
     });
@@ -636,19 +668,52 @@ def main():
     }
     
     // Enhanced cursor visibility for input fields
-    document.addEventListener('DOMContentLoaded', function() {
-        const style = document.createElement('style');
-        style.textContent = `
-            input[type="text"], input[type="password"], input[type="email"] {
-                caret-color: #3b82f6 !important;
-                caret-width: 2px !important;
+    const addCursorStyles = function() {
+        if (!document.getElementById('cursor-styles')) {
+            const style = document.createElement('style');
+            style.id = 'cursor-styles';
+            style.textContent = `
+                input[type="text"], input[type="password"], input[type="email"] {
+                    caret-color: #3b82f6 !important;
+                    caret-width: 2px !important;
+                }
+                input:focus {
+                    caret-color: #1d4ed8 !important;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    };
+    
+    // Add cursor styles on load and after DOM changes
+    document.addEventListener('DOMContentLoaded', addCursorStyles);
+    setTimeout(addCursorStyles, 1000);
+
+    // Handle window resize for responsive sidebar
+    window.addEventListener('resize', function() {
+        const sidebar = document.querySelector('[data-testid="stSidebar"]') || 
+                      document.querySelector('.stSidebar');
+        if (sidebar) {
+            if (window.innerWidth <= 768) {
+                // On mobile, sidebar should be collapsed by default
+                sidebar.classList.add('collapsed');
+                sidebar.style.transform = 'translateX(-100%)';
+            } else {
+                // On desktop, sidebar should be expanded by default
+                sidebar.classList.remove('collapsed');
+                sidebar.style.transform = 'translateX(0)';
             }
-            input:focus {
-                caret-color: #1d4ed8 !important;
-            }
-        `;
-        document.head.appendChild(style);
+        }
     });
+
+    // Ensure smooth transitions
+    setTimeout(function() {
+        const sidebar = document.querySelector('[data-testid="stSidebar"]') || 
+                      document.querySelector('.stSidebar');
+        if (sidebar) {
+            sidebar.style.transition = 'transform 0.3s ease';
+        }
+    }, 100);
     </script>
     """, unsafe_allow_html=True)
 

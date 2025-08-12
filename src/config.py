@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     # User authentication collections
     users_collection: str = Field(default="users")
     chat_history_collection: str = Field(default="chat_history")
+    user_profiles_collection: str = Field(default="user_profiles")
 
     class Config:
         env_file = ".env"  
